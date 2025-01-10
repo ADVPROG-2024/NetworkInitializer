@@ -1,0 +1,18 @@
+[package]
+name = "network_initializer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wg_2024 = { git = "https://github.com/WGL-2024/WGL_repo_2024.git", features = ["debug", "serialize"] }
+dronegowski = { git = "https://github.com/ADVPROG-2024/Dronegowski.git" }
+simulationcontroller = { git = "https://github.com/ADVPROG-2024/SimulationController.git" }
+toml = "0.8.19"
+crossbeam-channel = "0.5.13"
+rand = "0.9.0-beta.1"
+thiserror = "2.0.3"
+log = "0.4.22"
+
+[features]
+default = []  # Feature predefinita, può essere vuota
+debug = []    # Definizione della feature "debug"
