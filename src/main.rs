@@ -26,9 +26,15 @@ struct Server{
 }
 
 struct SimulationController{
-    node_vec: Vec<Node>,
+    node_set: HashSet<Node>,
     sim_controller_event_recv: Receiver<DroneEvent>,
     sim_controller_command_send: HashMap<NodeId, Sender<DroneCommand>>,
+}
+
+enum Nodo {
+    Drone {dronegowski: Dronegowski},
+    Client {client: Client},
+    Server {server: Server}
 }
 
 struct Node {
@@ -44,9 +50,9 @@ impl Node {
 }
 
 impl SimulationController {
-    fn new(node_vec: Vec<Node>, sim_controller_command_send: HashMap<NodeId, Sender<DroneCommand>>, sim_controller_event_recv: Receiver<DroneEvent> ) -> Self {
+    fn new(node_set: HashSet<Node>, sim_controller_command_send: HashMap<NodeId, Sender<DroneCommand>>, sim_controller_event_recv: Receiver<DroneEvent> ) -> Self {
         Self {
-            node_vec,
+            node_set,
             sim_controller_event_recv,
             sim_controller_command_send,
         }
@@ -66,120 +72,125 @@ pub fn parse_config(file: &str) -> Config {
 }
 
 fn parse_node(config: Config){
-    let (sim_event_send, sim_event_recv) = unbounded();
+    let (sim_event_send, sim_event_recv) = crossbeam_channel::unbounded::<DroneEvent>();
     let mut channels: HashMap<NodeId, (Sender<Packet>, Receiver<Packet>)> = HashMap::new();
     let mut sim_command_channels: HashMap<NodeId, Sender<DroneCommand>> = HashMap::new();
 
-    let mut node_vec = Vec::new();
+    let mut node_set: Vec<Nodo> = Vec::new();
 
     for drone in &config.drone {
         channels.insert(drone.id, unbounded());
     }
     for client in &config.client {
+        node_set.push(Nodo::Client {client});
+
         channels.insert(client.id, unbounded());
     }
     for server in &config.server {
+        server_set.push(server);
         channels.insert(server.id, unbounded());
     }
 
-    for node in config.drone{
+    for node in drone_set {
+        println!("{:?}", node);
 
-        let mut packet_send: HashMap<NodeId, Sender<Packet>> = HashMap::new();
-        for neighbour_id in &node.connected_node_ids{
-            let Some(channel_neighbour) = channels.get(&neighbour_id) else {
-                panic!("Channel for neighbour_id {} not found", neighbour_id);
+            let mut packet_send: HashMap<NodeId, Sender<Packet>> = HashMap::new();
+            for neighbour_id in &node.connected_node_ids{
+                let Some(channel_neighbour) = channels.get(&neighbour_id) else {
+                    panic!("Channel for neighbour_id {} not found", neighbour_id);
+                };
+                packet_send.insert(*neighbour_id, channel_neighbour.clone().0);
+
+                packet_send.insert(*neighbour_id, channel_neighbour.clone().0);
+            }
+
+            let (sim_command_send, sim_command_recv) = unbounded();
+            sim_command_channels.insert(node.id, sim_command_send);
+
+            let Some(command_channel) = sim_command_channels.get(&node.id) else {
+                panic!("Command channel for node.id {} not found", node.id);
             };
-            packet_send.insert(*neighbour_id, channel_neighbour.clone().0);
 
-            packet_send.insert(*neighbour_id, channel_neighbour.clone().0);
-        }
-
-        let (sim_command_send, sim_command_recv) = unbounded();
-        sim_command_channels.insert(node.id, sim_command_send);
-
-        let Some(command_channel) = sim_command_channels.get(&node.id) else {
-            panic!("Command channel for node.id {} not found", node.id);
-        };
-
-        let Some(channel) = channels.get(&node.id) else {
-            panic!("Channel for node.id {} not found", node.id);
-        };
-
-        let drone = Dronegowski::new(
-            node.id,
-            sim_event_send.clone(),
-            sim_command_recv,
-            channel.clone().1,
-            packet_send,
-            node.pdr
-        );
-
-        node_vec.push(Node { node_id: node.id });
-    }
-
-    for node in config.server{
-
-        let mut packet_send: HashMap<NodeId, Sender<Packet>> = HashMap::new();
-        for neighbour_id in &node.connected_drone_ids{
-            let Some(channel_neighbour) = channels.get(&neighbour_id) else {
+            let Some(channel) = channels.get(&node.id) else {
                 panic!("Channel for node.id {} not found", node.id);
             };
-            packet_send.insert(*neighbour_id, channel_neighbour.clone().0);
+
+            let drone = Dronegowski::new(
+                node.id,
+                sim_event_send.clone(),
+                sim_command_recv,
+                channel.clone().1,
+                packet_send,
+                node.pdr
+            );
+
+            node_set.push(Node { node_id: node.id });
         }
 
-        let (sim_command_send, sim_command_recv) = unbounded();
-        sim_command_channels.insert(node.id, sim_command_send);
+        for node in config.server{
 
-        let Some(command_channel) = sim_command_channels.get(&node.id) else {
-            panic!("Command channel for node.id {} not found", node.id);
-        };
-        let Some(channel) = channels.get(&node.id) else {
-            panic!("Channel for node.id {} not found", node.id);
-        };
+            let mut packet_send: HashMap<NodeId, Sender<Packet>> = HashMap::new();
+            for neighbour_id in &node.connected_drone_ids{
+                let Some(channel_neighbour) = channels.get(&neighbour_id) else {
+                    panic!("Channel for node.id {} not found", node.id);
+                };
+                packet_send.insert(*neighbour_id, channel_neighbour.clone().0);
+            }
 
-        let server = Server::new(
-            node.id,
-            sim_event_send.clone(),
-            sim_command_recv,
-            channel.clone().1,
-            packet_send,
-        );
+            let (sim_command_send, sim_command_recv) = unbounded();
+            sim_command_channels.insert(node.id, sim_command_send);
 
-        node_vec.push(Node { node_id: node.id });
-    }
-
-    for node in config.client{
-
-        let mut packet_send: HashMap<NodeId, Sender<Packet>> = HashMap::new();
-        for neighbour_id in &node.connected_drone_ids{
-            let Some(channel_neighbour) = channels.get(&neighbour_id) else {
-                panic!("Channel neighbour for node.id {} not found", node.id);
+            let Some(command_channel) = sim_command_channels.get(&node.id) else {
+                panic!("Command channel for node.id {} not found", node.id);
             };
-            packet_send.insert(*neighbour_id, channel_neighbour.clone().0);
+            let Some(channel) = channels.get(&node.id) else {
+                panic!("Channel for node.id {} not found", node.id);
+            };
+
+            let server = Server::new(
+                node.id,
+                sim_event_send.clone(),
+                sim_command_recv,
+                channel.clone().1,
+                packet_send,
+            );
+
+            node_vec.push(Node { node_id: node.id });
         }
 
-        let (sim_command_send, sim_command_recv) = unbounded();
-        sim_command_channels.insert(node.id, sim_command_send);
+        for node in config.client{
 
-        let Some(command_channel) = sim_command_channels.get(&node.id) else {
-            panic!("Command channel for node.id {} not found", node.id);
-        };
-        let Some(channel) = channels.get(&node.id) else {
-            panic!("Channel for node.id {} not found", node.id);
-        };
+            let mut packet_send: HashMap<NodeId, Sender<Packet>> = HashMap::new();
+            for neighbour_id in &node.connected_drone_ids{
+                let Some(channel_neighbour) = channels.get(&neighbour_id) else {
+                    panic!("Channel neighbour for node.id {} not found", node.id);
+                };
+                packet_send.insert(*neighbour_id, channel_neighbour.clone().0);
+            }
 
-        let client = Client::new(
-            node.id,
-            sim_event_send.clone(),
-            sim_command_recv,
-            channel.clone().1,
-            packet_send,
-        );
+            let (sim_command_send, sim_command_recv) = unbounded();
+            sim_command_channels.insert(node.id, sim_command_send);
 
-        node_vec.push(Node { node_id: node.id });
+            let Some(command_channel) = sim_command_channels.get(&node.id) else {
+                panic!("Command channel for node.id {} not found", node.id);
+            };
+            let Some(channel) = channels.get(&node.id) else {
+                panic!("Channel for node.id {} not found", node.id);
+            };
+
+            let client = Client::new(
+                node.id,
+                sim_event_send.clone(),
+                sim_command_recv,
+                channel.clone().1,
+                packet_send,
+            );
+
+            node_vec.push(Node { node_id: node.id });
+        }
+
+        let simulation_controller = SimulationController::new(node_vec, sim_command_channels, sim_event_recv);*/
     }
-
-    let simulation_controller = SimulationController::new(node_vec, sim_command_channels, sim_event_recv);
 }
 impl Client{
     fn new(
