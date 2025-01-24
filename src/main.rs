@@ -7,11 +7,12 @@ use wg_2024::drone::Drone;
 use dronegowski::Dronegowski;
 use log::LevelFilter;
 use simplelog::{ConfigBuilder, WriteLogger};
+use SimulationController::DronegowskiSimulationController;
 use wg_2024::controller::{DroneCommand, DroneEvent};
 use wg_2024::network::NodeId;
 use wg_2024::packet::Packet;
 
-struct SimulationController {
+/*struct SimulationController {
     nodes_channels: HashMap<NodeId, Sender<DroneCommand>>,
     sim_controller_event_recv: Receiver<DroneEvent>,
 }
@@ -32,7 +33,7 @@ impl SimulationController {
             sender.send(DroneCommand::Crash).unwrap();
         }
     }
-}
+}*/
 
 fn main(){
 
@@ -77,11 +78,11 @@ fn parse_node(config: Config) {
     let mut handles = Vec::new();
 
     // Creazione dei droni
-    for drone in config.drone.into_iter() {
-
+    for drone in config.drone.clone().into_iter() {
         let packet_recv = channels[&drone.id].1.clone(); // Packet Receiver Drone (canale su cui riceve i pacchetti il drone)
         let node_event_send = sim_event_send.clone(); // Controller Send Drone (canale del SC su cui può inviare gli eventi il drone)
         let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new(); // Packet Send Drone (canali dei nodi vicini a cui può inviare i pacchetti il drone)
+
         for neighbour_id in drone.connected_node_ids.clone() {
             let Some(channel_neighbour) = channels.get(&neighbour_id) else { panic!("") };
             neighbours.insert(neighbour_id, channel_neighbour.0.clone());
@@ -137,15 +138,15 @@ fn parse_node(config: Config) {
     }
 
     // Passa la lista di nodi al SimulationController
-    let mut simulation_controller = SimulationController::new(
-        sim_command_channels,
-        sim_event_recv,
-    );
+    handles.push(thread::spawn(move || {
+        DronegowskiSimulationController::new(config);
+    }));
+
 
     // let simulation_controller = SimulationController::
 
     // Prova di crash
-    simulation_controller.crash_all();
+    //simulation_controller.crash_all();
 
     while let Some(handle) = handles.pop() {
         handle.join().unwrap();
