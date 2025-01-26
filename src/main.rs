@@ -138,7 +138,7 @@ fn parse_node(config: Config) {
     }
 
     // Passa la lista di nodi al SimulationController
-        DronegowskiSimulationController::new(config);
+        DronegowskiSimulationController::new(config, sim_command_channels, sim_event_recv);
 
 
 
