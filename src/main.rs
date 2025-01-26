@@ -138,9 +138,8 @@ fn parse_node(config: Config) {
     }
 
     // Passa la lista di nodi al SimulationController
-    handles.push(thread::spawn(move || {
         DronegowskiSimulationController::new(config);
-    }));
+
 
 
     // let simulation_controller = SimulationController::
