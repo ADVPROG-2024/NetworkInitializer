@@ -1,16 +1,19 @@
 use std::collections::{HashMap, HashSet};
 use std::{fs, thread};
 use std::fs::File;
+use std::hash::Hash;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use wg_2024::config::Config;
 use wg_2024::drone::Drone;
 use dronegowski::Dronegowski;
+use dronegowski_utils::hosts::{ClientCommand, ClientEvent};
 use log::LevelFilter;
 use simplelog::{ConfigBuilder, WriteLogger};
 use SimulationController::DronegowskiSimulationController;
 use wg_2024::controller::{DroneCommand, DroneEvent};
 use wg_2024::network::NodeId;
 use wg_2024::packet::Packet;
+use client::DronegowskiClient;
 
 /*struct SimulationController {
     nodes_channels: HashMap<NodeId, Sender<DroneCommand>>,
@@ -57,10 +60,13 @@ pub fn parse_config(file: &str) -> Config {
 }
 
 fn parse_node(config: Config) {
-    let (sim_event_send, sim_event_recv) = crossbeam_channel::unbounded::<DroneEvent>();
+    let (sc_drone_event_send, sc_drone_event_recv) = unbounded::<DroneEvent>();
+    let (sc_client_event_send, sc_client_event_recv) = unbounded::<ClientEvent>();
 
     let mut channels: HashMap<NodeId, (Sender<Packet>, Receiver<Packet>)> = HashMap::new();
-    let mut sim_command_channels: HashMap<NodeId, Sender<DroneCommand>> = HashMap::new();
+    let mut sc_drone_channels: HashMap<NodeId, Sender<DroneCommand>> = HashMap::new();
+    let mut sc_client_channels: HashMap<NodeId, Sender<ClientCommand>> = HashMap::new();
+
 
     for drone in &config.drone {
         let (packet_send, packet_recv) = unbounded();
@@ -80,7 +86,7 @@ fn parse_node(config: Config) {
     // Creazione dei droni
     for drone in config.drone.clone().into_iter() {
         let packet_recv = channels[&drone.id].1.clone(); // Packet Receiver Drone (canale su cui riceve i pacchetti il drone)
-        let node_event_send = sim_event_send.clone(); // Controller Send Drone (canale del SC su cui può inviare gli eventi il drone)
+        let drone_event_send = sc_drone_event_send.clone(); // Controller Send Drone (canale del SC su cui può inviare gli eventi il drone)
         let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new(); // Packet Send Drone (canali dei nodi vicini a cui può inviare i pacchetti il drone)
 
         for neighbour_id in drone.connected_node_ids.clone() {
@@ -88,33 +94,35 @@ fn parse_node(config: Config) {
             neighbours.insert(neighbour_id, channel_neighbour.0.clone());
         }
 
-        let (command_send, command_recv) = unbounded();
-        sim_command_channels.insert(drone.id, command_send);
+        let (command_send, command_recv) = unbounded::<DroneCommand>();
+        sc_drone_channels.insert(drone.id, command_send);
 
         handles.push(thread::spawn(move || {
-            let mut drone = Dronegowski::new(drone.id, node_event_send, command_recv, packet_recv, neighbours, drone.pdr);
+            let mut drone = Dronegowski::new(drone.id, drone_event_send, command_recv, packet_recv, neighbours, drone.pdr);
 
             drone.run();
         }));
     }
 
     // Creazione dei client
-    for client in &config.client {
+    for client in config.client.clone().into_iter() {
+        let packet_recv = channels[&client.id].1.clone(); // Packet Receiver Client (canale su cui riceve i pacchetti il client)
+        let client_event_send = sc_client_event_send.clone(); // Controller Send Client (canale del SC su cui può inviare gli eventi il client)
+        let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new(); // Packet Send Client (canali dei nodi vicini a cui può inviare i pacchetti il client)
 
-        // let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new();
-        // for neighbour_id in client.connected_drone_ids.clone() {
-        //     let Some(channel_neighbour) = channels.get(&neighbour_id) else { panic!("") };
-        //     neighbours.insert(neighbour_id, channel_neighbour.0.clone());
-        // }
+        for neighbour_id in client.connected_drone_ids.clone() {
+            let Some(channel_neighbour) = channels.get(&neighbour_id) else { panic!("") };
+            neighbours.insert(neighbour_id, channel_neighbour.0.clone());
+        }
 
-        //let (command_send, command_recv) = unbounded();
-        // sim_command_channels.insert(client.id, command_send);
+        let (command_send, command_recv) = unbounded::<ClientCommand>();
+        sc_client_channels.insert(client.id, command_send);
 
-        // handles.push(thread::spawn(move || {
-        //      let mut client = Client::new(...);
-        //
-        //      client.run();
-        // }));
+        handles.push(thread::spawn(move || {
+            let mut client = DronegowskiClient::new(client.id, client_event_send, command_recv, packet_recv, neighbours);
+
+            client.run();
+        }));
     }
 
     // Creazione dei server
@@ -138,7 +146,7 @@ fn parse_node(config: Config) {
     }
 
     // Passa la lista di nodi al SimulationController
-    DronegowskiSimulationController::new(config, sim_command_channels, sim_event_recv);
+    DronegowskiSimulationController::new(config.clone(), sc_drone_channels, sc_client_channels, sc_drone_event_recv, sc_client_event_recv);
 
 
 
