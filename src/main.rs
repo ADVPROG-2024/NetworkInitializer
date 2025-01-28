@@ -5,7 +5,7 @@ use crossbeam_channel::{unbounded, Receiver, Sender};
 use wg_2024::config::Config;
 use wg_2024::drone::Drone;
 use dronegowski::Dronegowski;
-use dronegowski_utils::hosts::{ClientCommand, ClientEvent, ServerCommand, ServerEvent};
+use dronegowski_utils::hosts::{ClientCommand, ClientEvent, ClientType, ServerCommand, ServerEvent};
 use SimulationController::DronegowskiSimulationController;
 use wg_2024::controller::{DroneCommand, DroneEvent};
 use wg_2024::network::NodeId;
@@ -13,6 +13,7 @@ use wg_2024::packet::Packet;
 use client::DronegowskiClient;
 use dronegowski_utils::functions::simple_log;
 use dronegowski_utils::network::{SimulationControllerNode, SimulationControllerNodeType};
+use rand::Rng;
 
 fn main(){
     simple_log();
@@ -98,10 +99,14 @@ fn parse_node(config: Config) {
         let (command_send, command_recv) = unbounded::<ClientCommand>();
         sc_client_channels.insert(client.id, command_send.clone());
 
-        SimulationControllerNode::new(SimulationControllerNodeType::CLIENT{ client_channel: command_send}, client.id, neighbours_id, & mut nodi);
+        let client_type = if rand::rngs::ThreadRng::default().random_range(0..=1) == 1 {
+            ClientType::ChatClients
+        } else {ClientType::WebBrowsers};
+
+        SimulationControllerNode::new(SimulationControllerNodeType::CLIENT{ client_channel: command_send, client_type: client_type.clone()}, client.id, neighbours_id, & mut nodi);
 
         handles.push(thread::spawn(move || {
-            let mut client = DronegowskiClient::new(client.id, client_event_send, command_recv, packet_recv, neighbours);
+            let mut client = DronegowskiClient::new(client.id, client_event_send, command_recv, packet_recv, neighbours, client_type);
 
             client.run();
         }));
