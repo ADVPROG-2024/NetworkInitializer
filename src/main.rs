@@ -138,7 +138,7 @@ fn parse_node(config: Config) {
     }
 
     // Passa la lista di nodi al SimulationController
-    DronegowskiSimulationController::new(nodi, sc_drone_channels, sc_client_channels, sc_server_channels, sc_drone_event_recv, sc_client_event_recv, sc_server_event_recv, channels, sc_drone_event_send, handles);
+    DronegowskiSimulationController::new(nodi, sc_drone_channels, sc_client_channels, sc_server_channels, sc_drone_event_send, sc_drone_event_recv, sc_client_event_recv, sc_server_event_recv, channels, &mut handles);
 
     while let Some(handle) = handles.pop() {
         handle.join().unwrap();
