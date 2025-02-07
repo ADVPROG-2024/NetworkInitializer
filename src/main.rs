@@ -14,7 +14,7 @@ use client::DronegowskiClient;
 use dronegowski_utils::functions::simple_log;
 use dronegowski_utils::network::{SimulationControllerNode, SimulationControllerNodeType};
 use rand::Rng;
-use servers::{CommunicationServer};
+use servers::{CommunicationServer, DronegowskiServer};
 
 fn main(){
     simple_log();
@@ -114,7 +114,7 @@ fn parse_node(config: Config) {
     }
 
     // Creazione dei server
-    for server in &config.server {
+    for server in config.server.clone().into_iter()  {
         let packet_recv = channels[&server.id].1.clone(); // Packet Receiver Server (canale su cui riceve i pacchetti il server)
         let server_event_send = sc_server_event_send.clone(); // Controller Send Server (canale del SC su cui può inviare gli eventi il server)
         let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new(); // Packet Send Server (canali dei nodi vicini a cui può inviare i pacchetti il server)
