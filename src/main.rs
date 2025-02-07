@@ -11,12 +11,10 @@ use wg_2024::controller::{DroneCommand, DroneEvent};
 use wg_2024::network::NodeId;
 use wg_2024::packet::Packet;
 use client::DronegowskiClient;
-
 use dronegowski_utils::functions::simple_log;
-use dronegowski_utils::hosts::ClientMessages::ServerType;
-use dronegowski_utils::hosts::ServerType::Communication;
 use dronegowski_utils::network::{SimulationControllerNode, SimulationControllerNodeType};
 use rand::Rng;
+use servers::{CommunicationServer};
 
 fn main(){
     simple_log();
@@ -134,7 +132,7 @@ fn parse_node(config: Config) {
         SimulationControllerNode::new(SimulationControllerNodeType::SERVER{ server_channel: command_send}, server.id, neighbours_id, & mut nodi);
 
         handles.push(thread::spawn(move || {
-             let mut server = CommunicationServer::new(server.id, server_event_send, command_recv, packet_recv, neighbours, ServerType::CommunicationServer);
+             let mut server = CommunicationServer::new(server.id, server_event_send, command_recv, packet_recv, neighbours, ServerType::Communication);
              server.run();
         }));
     }
