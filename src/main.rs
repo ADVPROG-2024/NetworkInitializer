@@ -14,7 +14,7 @@ use client::DronegowskiClient;
 use dronegowski_utils::functions::simple_log;
 use dronegowski_utils::network::{SimulationControllerNode, SimulationControllerNodeType};
 use rand::Rng;
-use servers::{CommunicationServer, DronegowskiServer};
+use servers::{CommunicationServer, ContentServer, DronegowskiServer};
 
 fn main(){
     simple_log();
@@ -132,8 +132,9 @@ fn parse_node(config: Config) {
         SimulationControllerNode::new(SimulationControllerNodeType::SERVER{ server_channel: command_send}, server.id, neighbours_id, & mut nodi);
 
         handles.push(thread::spawn(move || {
-             let mut server = CommunicationServer::new(server.id, server_event_send, command_recv, packet_recv, neighbours, ServerType::Communication);
-             server.run();
+            let mut server = CommunicationServer::new(server.id, server_event_send, command_recv, packet_recv, neighbours, ServerType::Communication);
+            //let mut server = ContentServer::new(server.id, server_event_send, command_recv, packet_recv, neighbours, ServerType::Content, "ContentServerData/file", "ContentServerData/media");
+            server.run();
         }));
     }
 
