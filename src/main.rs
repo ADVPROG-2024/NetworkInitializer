@@ -11,7 +11,7 @@ use wg_2024::controller::{DroneCommand, DroneEvent};
 use wg_2024::network::NodeId;
 use wg_2024::packet::Packet;
 use client::DronegowskiClient;
-use dronegowski_utils::functions::simple_log;
+use dronegowski_utils::functions::{simple_log, validate_network};
 use dronegowski_utils::hosts::ClientMessages::ServerType;
 use dronegowski_utils::network::{SimulationControllerNode, SimulationControllerNodeType};
 use rand::Rng;
@@ -20,7 +20,7 @@ use servers::{CommunicationServer, ContentServer, DronegowskiServer};
 fn main(){
     simple_log();
 
-    let config = parse_config("config_file/config.toml");
+    let config = parse_config("config_file/config_star.toml");
     parse_node(config);
 }
 
@@ -154,6 +154,8 @@ fn parse_node(config: Config) {
         }
 
     }
+    
+    validate_network(&nodi).expect("Network non valido!");
 
     // Passa la lista di nodi al SimulationController
     DronegowskiSimulationController::new(nodi, sc_drone_channels, sc_client_channels, sc_server_channels, sc_drone_event_send, sc_drone_event_recv, sc_client_event_recv, sc_server_event_recv, channels, &mut handles);
