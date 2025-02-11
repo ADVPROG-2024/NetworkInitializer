@@ -1,7 +1,7 @@
 [[drone]]
 id = 1
-connected_node_ids = [4, 8, 11, 17, 21]  # +3/-3 + client/server
-pdr = 0.934
+connected_node_ids = [4, 8, 11, 17, 21]
+pdr = 0.321
 
 [[drone]]
 id = 2

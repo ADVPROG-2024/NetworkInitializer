@@ -12,10 +12,18 @@ use wg_2024::network::NodeId;
 use wg_2024::packet::Packet;
 use client::DronegowskiClient;
 use dronegowski_utils::functions::{simple_log, validate_network};
-use dronegowski_utils::hosts::ClientMessages::ServerType;
 use dronegowski_utils::network::{SimulationControllerNode, SimulationControllerNodeType};
+use null_pointer_drone::MyDrone;
+use rolling_drone::RollingDrone;
+use rust_do_it::RustDoIt;
 use rand::Rng;
 use servers::{CommunicationServer, ContentServer, DronegowskiServer};
+use skylink::SkyLinkDrone;
+use bagel_bomber::BagelBomber;
+use rustbusters_drone::RustBustersDrone;
+use rusty_drones::RustyDrone;
+use lockheedrustin_drone::LockheedRustin;
+use bobry_w_locie::drone::BoberDrone;
 
 fn main(){
     simple_log();
@@ -79,7 +87,7 @@ fn parse_node(config: Config) {
         SimulationControllerNode::new(SimulationControllerNodeType::DRONE{ drone_channel: command_send, pdr: drone.pdr }, drone.id, neighbours_id, &mut nodi);
 
         handles.push(thread::spawn(move || {
-            let mut drone = Dronegowski::new(drone.id, drone_event_send, command_recv, packet_recv, neighbours, drone.pdr);
+            let mut drone = RustDoIt::new(drone.id, drone_event_send, command_recv, packet_recv, neighbours, drone.pdr);
 
             drone.run();
         }));
@@ -131,7 +139,7 @@ fn parse_node(config: Config) {
         sc_server_channels.insert(server.id, command_send.clone());
 
         let server_type = if rand::rngs::ThreadRng::default().random_range(0..=1) == 1 {
-            ST::Communication
+            ST::Content
         } else {ST::Content};
 
         match server_type {
