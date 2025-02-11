@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 wg_2024 = { git = "https://github.com/WGL-2024/WGL_repo_2024.git", features = ["debug", "serialize"] }
+rustastic-drone = { git = "https://github.com/Rustastic/RustasticDrone.git" }
 dronegowski = { git = "https://github.com/ADVPROG-2024/Dronegowski.git" }
 SimulationController = { git = "https://github.com/ADVPROG-2024/SimulationController.git" }
 dronegowski_utils = {git = "https://github.com/ADVPROG-2024/dronegowski_utils.git"}
