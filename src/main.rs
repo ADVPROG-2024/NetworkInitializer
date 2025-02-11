@@ -27,7 +27,7 @@ use rustastic_drone::RustasticDrone;
 
 fn main(){
     simple_log();
-    let config = parse_config("config_file/config_star.toml");
+    let config = parse_config("config_file/config_no_other_route.toml");
     parse_node(config);
 }
 
@@ -149,6 +149,11 @@ fn parse_node(config: Config) {
                 "RustasticDrone" => {
                     println!("RustasticDrone {}", drone_id);
                     let mut drone = RustasticDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+                "RollingDrone" => {
+                    println!("RollingDrone {}", drone_id);
+                    let mut drone = RollingDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 &_ => {}
