@@ -10,6 +10,18 @@ SimulationController = { git = "https://github.com/ADVPROG-2024/SimulationContro
 dronegowski_utils = {git = "https://github.com/ADVPROG-2024/dronegowski_utils.git"}
 client = {git = "https://github.com/ADVPROG-2024/Client.git"}
 servers = {git = "https://github.com/ADVPROG-2024/Servers.git"}
+
+null-pointer-drone = { git = "https://github.com/The-Null-Pointer-Patrol/null-pointer-drone.git"}
+rustastic-drone = { git = "https://github.com/Rustastic/RustasticDrone.git" }
+rolling_drone = { git = "https://github.com/giorebecchi/RollingDrone.git"}
+rust_do_it = { git = "https://github.com/RustDoIt/Drone.git" } # non va!
+skylink = { git = "https://github.com/Suge42/Skylink_drone.git" }
+bagel_bomber = { git = "https://github.com/daw-dev/bagel-bomber.git", default-features = false }
+rustbusters-drone = { git = "https://github.com/Rustbusters/drone.git" }
+rusty_drones = { git = "https://github.com/rusty-drone-2024/rusty-drone.git" }
+lockheedrustin-drone = { git = "https://github.com/Lockheed-Rustin/drone.git" }
+bobry_w_locie = {git = "https://github.com/Seregno/Public_Bry_w_locie.git"}
+
 toml = "0.8.19"
 crossbeam-channel = "0.5.13"
 rand = "0.9.0-beta.1"
