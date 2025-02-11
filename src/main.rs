@@ -1,10 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::{fs, thread};
 use std::hash::Hash;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use wg_2024::config::Config;
 use wg_2024::drone::Drone;
-use dronegowski::Dronegowski;
 use dronegowski_utils::hosts::{ClientCommand, ClientEvent, ClientType, ServerCommand, ServerEvent, ServerType as ST};
 use SimulationController::DronegowskiSimulationController;
 use wg_2024::controller::{DroneCommand, DroneEvent};
@@ -24,10 +23,10 @@ use rustbusters_drone::RustBustersDrone;
 use rusty_drones::RustyDrone;
 use lockheedrustin_drone::LockheedRustin;
 use bobry_w_locie::drone::BoberDrone;
+use rustastic_drone::RustasticDrone;
 
 fn main(){
     simple_log();
-
     let config = parse_config("config_file/config_star.toml");
     parse_node(config);
 }
@@ -68,11 +67,25 @@ fn parse_node(config: Config) {
 
     let mut handles = Vec::new();
 
+    let drone_implementations = vec![
+        "RustDoIt",
+        "MyDrone",
+        "RollingDrone",
+        "SkyLinkDrone",
+        "BagelBomber",
+        "RustBustersDrone",
+        "RustyDrone",
+        "LockheedRustin",
+        "BoberDrone",
+        "RustasticDrone",
+    ];
+    let num_implementations = drone_implementations.len();
+
     // Creazione dei droni
-    for drone in config.drone.clone().into_iter() {
-        let packet_recv = channels[&drone.id].1.clone(); // Packet Receiver Drone (canale su cui riceve i pacchetti il drone)
-        let drone_event_send = sc_drone_event_send.clone(); // Controller Send Drone (canale del SC su cui può inviare gli eventi il drone)
-        let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new(); // Packet Send Drone (canali dei nodi vicini a cui può inviare i pacchetti il drone)
+    for (drone_index, drone) in config.drone.clone().into_iter().enumerate() {
+        let packet_recv = channels[&drone.id].1.clone();
+        let drone_event_send = sc_drone_event_send.clone();
+        let mut neighbours: HashMap<NodeId, Sender<Packet>> = HashMap::new();
         let mut neighbours_id = Vec::new();
 
         for neighbour_id in drone.connected_node_ids.clone() {
@@ -86,18 +99,68 @@ fn parse_node(config: Config) {
 
         SimulationControllerNode::new(SimulationControllerNodeType::DRONE{ drone_channel: command_send, pdr: drone.pdr }, drone.id, neighbours_id, &mut nodi);
 
-        handles.push(thread::spawn(move || {
-            let mut drone = RustDoIt::new(drone.id, drone_event_send, command_recv, packet_recv, neighbours, drone.pdr);
+        let impl_name = drone_implementations[drone_index % num_implementations].clone();
+        let drone_id = drone.id;
+        let drone_pdr = drone.pdr;
 
-            drone.run();
+        handles.push(thread::spawn(move || {
+            match impl_name {
+                "RustDoIt" => {
+                    println!("RustDoIt {}", drone_id);
+                    let mut drone = RustDoIt::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+                "MyDrone" => {
+                    println!("MyDrone {}", drone_id);
+                    let mut drone = MyDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+
+                "SkyLinkDrone" => {
+                    println!("SkyLinkDrone {}", drone_id);
+                    let mut drone = SkyLinkDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+                "BagelBomber" => {
+                    println!("BagelBomber {}", drone_id);
+                    let mut drone = BagelBomber::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+                "RustBustersDrone" => {
+                    println!("RustBustersDrone {}", drone_id);
+                    let mut drone = RustBustersDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+                "RustyDrone" => {
+                    println!("RustyDrone {}", drone_id);
+                    let mut drone = RustyDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+                "LockheedRustin" => {
+                    println!("LockheedRustin {}", drone_id);
+                    let mut drone = LockheedRustin::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+                "BoberDrone" => {
+                    println!("BoberDrone {}", drone_id);
+                    let mut drone = BoberDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+                "RustasticDrone" => {
+                    println!("RustasticDrone {}", drone_id);
+                    let mut drone = RustasticDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
+                    drone.run();
+                }
+                &_ => {}
+            }
         }));
     }
 
     // Creazione dei client
     for client in config.client.clone().into_iter() {
-        let packet_recv = channels[&client.id].1.clone(); // Packet Receiver Client (canale su cui riceve i pacchetti il client)
-        let client_event_send = sc_client_event_send.clone(); // Controller Send Client (canale del SC su cui può inviare gli eventi il client)
-        let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new(); // Packet Send Client (canali dei nodi vicini a cui può inviare i pacchetti il client)
+        let packet_recv = channels[&client.id].1.clone();
+        let client_event_send = sc_client_event_send.clone();
+        let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new();
         let mut neighbours_id = Vec::new();
 
         for neighbour_id in client.connected_drone_ids.clone() {
@@ -117,16 +180,15 @@ fn parse_node(config: Config) {
 
         handles.push(thread::spawn(move || {
             let mut client = DronegowskiClient::new(client.id, client_event_send, command_recv, packet_recv, neighbours, client_type);
-
             client.run();
         }));
     }
 
     // Creazione dei server
     for server in config.server.clone().into_iter()  {
-        let packet_recv = channels[&server.id].1.clone(); // Packet Receiver Server (canale su cui riceve i pacchetti il server)
-        let server_event_send = sc_server_event_send.clone(); // Controller Send Server (canale del SC su cui può inviare gli eventi il server)
-        let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new(); // Packet Send Server (canali dei nodi vicini a cui può inviare i pacchetti il server)
+        let packet_recv = channels[&server.id].1.clone();
+        let server_event_send = sc_server_event_send.clone();
+        let mut neighbours:HashMap<NodeId, Sender<Packet>> = HashMap::new();
         let mut neighbours_id = Vec::new();
 
         for neighbour_id in server.connected_drone_ids.clone() {
@@ -140,7 +202,7 @@ fn parse_node(config: Config) {
 
         let server_type = if rand::rngs::ThreadRng::default().random_range(0..=1) == 1 {
             ST::Content
-        } else {ST::Content};
+        } else {ST::Communication};
 
         match server_type {
             ST::Communication => {
@@ -160,12 +222,10 @@ fn parse_node(config: Config) {
                 }));
             }
         }
-
     }
-    
+
     validate_network(&nodi).expect("Network non valido!");
 
-    // Passa la lista di nodi al SimulationController
     DronegowskiSimulationController::new(nodi, sc_drone_channels, sc_client_channels, sc_server_channels, sc_drone_event_send, sc_drone_event_recv, sc_client_event_recv, sc_server_event_recv, channels, &mut handles);
 
     while let Some(handle) = handles.pop() {
