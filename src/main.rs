@@ -27,7 +27,7 @@ use rustastic_drone::RustasticDrone;
 
 fn main(){
     simple_log();
-    let config = parse_config("config_file/config_no_other_route.toml");
+    let config = parse_config("config_file/config_tree.toml");
     parse_node(config);
 }
 
