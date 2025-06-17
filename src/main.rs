@@ -27,7 +27,7 @@ use rustastic_drone::RustasticDrone;
 
 fn main(){
     simple_log();
-    let config = parse_config("config_file/config_tree.toml");
+    let config = parse_config("config.toml");
     parse_node(config);
 }
 
@@ -97,11 +97,12 @@ fn parse_node(config: Config) {
         let (command_send, command_recv) = unbounded::<DroneCommand>();
         sc_drone_channels.insert(drone.id, command_send.clone());
 
-        SimulationControllerNode::new(SimulationControllerNodeType::DRONE{ drone_channel: command_send, pdr: drone.pdr }, drone.id, neighbours_id, &mut nodi);
 
         let impl_name = drone_implementations[drone_index % num_implementations].clone();
         let drone_id = drone.id;
         let drone_pdr = drone.pdr;
+
+        SimulationControllerNode::new(SimulationControllerNodeType::DRONE{ drone_channel: command_send, pdr: drone.pdr, drone_type: impl_name.clone().to_string() }, drone.id, neighbours_id, &mut nodi);
 
         handles.push(thread::spawn(move || {
             match impl_name {
