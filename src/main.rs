@@ -27,13 +27,13 @@ use rustastic_drone::RustasticDrone;
 
 fn main(){
     simple_log();
-    let config = parse_config("config.toml");
+    let config = parse_config("config_file/config.toml");
     parse_node(config);
 }
 
 pub fn parse_config(file: &str) -> Config {
     let file_str = fs::read_to_string(file).expect("error reading config file");
-    println!("Parsing configuration file...");
+    // println!("Parsing configuration file...");
     toml::from_str(&file_str).expect("Error occurred during config file parsing")
 }
 
@@ -107,53 +107,53 @@ fn parse_node(config: Config) {
         handles.push(thread::spawn(move || {
             match impl_name {
                 "RustDoIt" => {
-                    println!("RustDoIt {}", drone_id);
+                    // println!("RustDoIt {}", drone_id);
                     let mut drone = RustDoIt::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "MyDrone" => {
-                    println!("MyDrone {}", drone_id);
+                    // println!("MyDrone {}", drone_id);
                     let mut drone = MyDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
 
                 "SkyLinkDrone" => {
-                    println!("SkyLinkDrone {}", drone_id);
+                    // println!("SkyLinkDrone {}", drone_id);
                     let mut drone = SkyLinkDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "BagelBomber" => {
-                    println!("BagelBomber {}", drone_id);
+                    // println!("BagelBomber {}", drone_id);
                     let mut drone = BagelBomber::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "RustBustersDrone" => {
-                    println!("RustBustersDrone {}", drone_id);
+                    // println!("RustBustersDrone {}", drone_id);
                     let mut drone = RustBustersDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "RustyDrone" => {
-                    println!("RustyDrone {}", drone_id);
+                    // println!("RustyDrone {}", drone_id);
                     let mut drone = RustyDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "LockheedRustin" => {
-                    println!("LockheedRustin {}", drone_id);
+                    // println!("LockheedRustin {}", drone_id);
                     let mut drone = LockheedRustin::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "BoberDrone" => {
-                    println!("BoberDrone {}", drone_id);
+                    // println!("BoberDrone {}", drone_id);
                     let mut drone = BoberDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "RustasticDrone" => {
-                    println!("RustasticDrone {}", drone_id);
+                    // println!("RustasticDrone {}", drone_id);
                     let mut drone = RustasticDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "RollingDrone" => {
-                    println!("RollingDrone {}", drone_id);
+                    // println!("RollingDrone {}", drone_id);
                     let mut drone = RollingDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
