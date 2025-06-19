@@ -3,6 +3,8 @@ use std::{fs, thread};
 use std::hash::Hash;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use wg_2024::config::Config;
+use std::io::{self, Write};
+use std::path::Path;
 use wg_2024::drone::Drone;
 use dronegowski_utils::hosts::{ClientCommand, ClientEvent, ClientType, ServerCommand, ServerEvent, ServerType as ST};
 use SimulationController::DronegowskiSimulationController;
@@ -27,14 +29,99 @@ use rustastic_drone::RustasticDrone;
 
 fn main(){
     simple_log();
-    let config = parse_config("config_file/config.toml");
-    parse_node(config);
+
+    if let Some(selected_config_path) = select_config_file() {
+        println!("Using configuration: {}", selected_config_path);
+        let config = parse_config(&selected_config_path);
+        parse_node(config);
+    } else {
+        println!("No configuration file selected or an error occurred. Exiting.");
+        // Optionally, you might want to exit with an error code:
+        // std::process::exit(1);
+    }
 }
 
 pub fn parse_config(file: &str) -> Config {
     let file_str = fs::read_to_string(file).expect("error reading config file");
     // println!("Parsing configuration file...");
     toml::from_str(&file_str).expect("Error occurred during config file parsing")
+}
+
+fn select_config_file() -> Option<String> {
+    let config_dir = "config_file";
+    let mut config_files: Vec<String> = Vec::new();
+
+    match fs::read_dir(config_dir) {
+        Ok(entries) => {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(ext) = path.extension() {
+                            if ext == "toml" {
+                                if let Some(path_str) = path.to_str() {
+                                    config_files.push(path_str.to_string());
+                                } else {
+                                    eprintln!("Warning: Found a .toml file with non-UTF8 path: {:?}", path);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Error reading directory '{}': {}", config_dir, e);
+            return None;
+        }
+    }
+
+    if config_files.is_empty() {
+        eprintln!("No .toml configuration files found in '{}'.", config_dir);
+        return None;
+    }
+
+    // Sort for consistent order (optional, but good for user experience)
+    config_files.sort();
+
+    println!("\nAvailable configuration files:");
+    for (i, file_path) in config_files.iter().enumerate() {
+        // Display only the filename for easier selection
+        let file_name = Path::new(file_path)
+            .file_name()
+            .unwrap_or_default() // Should not fail if path_str was valid
+            .to_string_lossy();
+        println!("{}: {}", i + 1, file_name);
+    }
+
+    loop {
+        print!("Enter the number of the config file to use (or 'q' to quit): ");
+        io::stdout().flush().expect("Failed to flush stdout"); // Ensure prompt is shown before input
+
+        let mut input = String::new();
+        if io::stdin().read_line(&mut input).is_err() {
+            eprintln!("Failed to read line. Please try again.");
+            continue;
+        }
+
+        let trimmed_input = input.trim();
+        if trimmed_input.eq_ignore_ascii_case("q") {
+            return None; // User chose to quit
+        }
+
+        match trimmed_input.parse::<usize>() {
+            Ok(num) => {
+                if num > 0 && num <= config_files.len() {
+                    return Some(config_files[num - 1].clone());
+                } else {
+                    eprintln!("Invalid selection. Please enter a number between 1 and {}.", config_files.len());
+                }
+            }
+            Err(_) => {
+                eprintln!("Invalid input. Please enter a number or 'q' to quit.");
+            }
+        }
+    }
 }
 
 fn parse_node(config: Config) {
