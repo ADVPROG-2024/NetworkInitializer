@@ -1,6 +1,5 @@
 use std::collections::{HashMap};
 use std::{fs, thread};
-use std::hash::Hash;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use wg_2024::config::Config;
 use std::io::{self, Write};
@@ -36,14 +35,12 @@ fn main(){
         parse_node(config);
     } else {
         println!("No configuration file selected or an error occurred. Exiting.");
-        // Optionally, you might want to exit with an error code:
-        // std::process::exit(1);
+
     }
 }
 
 pub fn parse_config(file: &str) -> Config {
     let file_str = fs::read_to_string(file).expect("error reading config file");
-    // println!("Parsing configuration file...");
     toml::from_str(&file_str).expect("Error occurred during config file parsing")
 }
 
@@ -81,22 +78,20 @@ fn select_config_file() -> Option<String> {
         return None;
     }
 
-    // Sort for consistent order (optional, but good for user experience)
     config_files.sort();
 
     println!("\nAvailable configuration files:");
     for (i, file_path) in config_files.iter().enumerate() {
-        // Display only the filename for easier selection
         let file_name = Path::new(file_path)
             .file_name()
-            .unwrap_or_default() // Should not fail if path_str was valid
+            .unwrap_or_default()
             .to_string_lossy();
         println!("{}: {}", i + 1, file_name);
     }
 
     loop {
         print!("Enter the number of the config file to use (or 'q' to quit): ");
-        io::stdout().flush().expect("Failed to flush stdout"); // Ensure prompt is shown before input
+        io::stdout().flush().expect("Failed to flush stdout");
 
         let mut input = String::new();
         if io::stdin().read_line(&mut input).is_err() {
@@ -106,7 +101,7 @@ fn select_config_file() -> Option<String> {
 
         let trimmed_input = input.trim();
         if trimmed_input.eq_ignore_ascii_case("q") {
-            return None; // User chose to quit
+            return None;
         }
 
         match trimmed_input.parse::<usize>() {
@@ -168,7 +163,6 @@ fn parse_node(config: Config) {
     ];
     let num_implementations = drone_implementations.len();
 
-    // Creazione dei droni
     for (drone_index, drone) in config.drone.clone().into_iter().enumerate() {
         let packet_recv = channels[&drone.id].1.clone();
         let drone_event_send = sc_drone_event_send.clone();
@@ -185,62 +179,51 @@ fn parse_node(config: Config) {
         sc_drone_channels.insert(drone.id, command_send.clone());
 
 
-        let impl_name = drone_implementations[drone_index % num_implementations].clone();
+        let impl_name = drone_implementations[drone_index % num_implementations];
         let drone_id = drone.id;
         let drone_pdr = drone.pdr;
 
-        SimulationControllerNode::new(SimulationControllerNodeType::DRONE{ drone_channel: command_send, pdr: drone.pdr, drone_type: impl_name.clone().to_string() }, drone.id, neighbours_id, &mut nodi);
+        SimulationControllerNode::new(SimulationControllerNodeType::DRONE{ drone_channel: command_send, pdr: drone.pdr, drone_type: impl_name.to_string() }, drone.id, neighbours_id, &mut nodi);
 
         handles.push(thread::spawn(move || {
             match impl_name {
                 "RustDoIt" => {
-                    // println!("RustDoIt {}", drone_id);
                     let mut drone = RustDoIt::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "MyDrone" => {
-                    // println!("MyDrone {}", drone_id);
                     let mut drone = MyDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
-
                 "SkyLinkDrone" => {
-                    // println!("SkyLinkDrone {}", drone_id);
                     let mut drone = SkyLinkDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "BagelBomber" => {
-                    // println!("BagelBomber {}", drone_id);
                     let mut drone = BagelBomber::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "RustBustersDrone" => {
-                    // println!("RustBustersDrone {}", drone_id);
                     let mut drone = RustBustersDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "RustyDrone" => {
-                    // println!("RustyDrone {}", drone_id);
                     let mut drone = RustyDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "LockheedRustin" => {
-                    // println!("LockheedRustin {}", drone_id);
                     let mut drone = LockheedRustin::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "BoberDrone" => {
-                    // println!("BoberDrone {}", drone_id);
                     let mut drone = BoberDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "RustasticDrone" => {
-                    // println!("RustasticDrone {}", drone_id);
                     let mut drone = RustasticDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
                 "RollingDrone" => {
-                    // println!("RollingDrone {}", drone_id);
                     let mut drone = RollingDrone::new(drone_id, drone_event_send, command_recv, packet_recv, neighbours, drone_pdr);
                     drone.run();
                 }
@@ -249,7 +232,6 @@ fn parse_node(config: Config) {
         }));
     }
 
-    // Creazione dei client
     for client in config.client.clone().into_iter() {
         let packet_recv = channels[&client.id].1.clone();
         let client_event_send = sc_client_event_send.clone();
@@ -277,7 +259,6 @@ fn parse_node(config: Config) {
         }));
     }
 
-    // Creazione dei server
     for server in config.server.clone().into_iter()  {
         let packet_recv = channels[&server.id].1.clone();
         let server_event_send = sc_server_event_send.clone();
